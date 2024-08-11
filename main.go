@@ -18,14 +18,12 @@ func main() {
 
 	handler := server.NewServeMux()
 
-	handler.HandleFunc(protocol.StateStatus, status.ServerBoundPingPacketID, handlers.Echo)
+	handler.HandleFunc(protocol.StateStatus, status.PingPongPacketID, handlers.Echo)
 	handler.HandleFunc(protocol.StateStatus, status.ServerBoundRequestPacketID, handlers.StatusRequest)
 
 	handler.HandleFunc(protocol.StateHandshaking, handshaking.ServerBoundHandshakePacketID, handlers.Handshake)
 
 	handler.HandleFunc(protocol.StateLogin, login.ServerBoundLoginStartPacketID, handlers.LoginStart)
-	handler.HandleFunc(protocol.StateLogin, login.ServerBoundEncryptionResponsePacketID, handlers.EncryptionResponse)
-	
 	handler.HandleFunc(protocol.StateLogin, login.ServerBoundEncryptionResponsePacketID, handlers.EncryptionResponse)
 
 	srv := &server.Server{
