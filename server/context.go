@@ -3,7 +3,9 @@ package server
 import (
 	"amethyst/crypto"
 	"amethyst/protocol"
+	"amethyst/protocol/packets/play"
 	"crypto/aes"
+	"time"
 
 	"github.com/gofrs/uuid"
 )
@@ -14,8 +16,29 @@ type Context struct {
 	conn   *conn
 }
 
+func KeepAliveLoop(ctx *Context) {
+	for {
+		ctx.WritePacket(play.KeepAlive{
+			ID: protocol.VarInt(ctx.conn.keepalive),
+		}.Marshal())
+
+		time.Sleep(time.Second * 18)
+
+		if time.Since(ctx.conn.lastresponse) > (time.Second * 22) {
+			ctx.WritePacket(play.ClientBoundDisconnect{
+				Reason: "Time Out",
+			}.Marshal())
+			break
+		}
+	}
+}
+
 func (ctx *Context) SetState(state protocol.State) {
 	ctx.conn.state = state
+	if state == protocol.StatePlay {
+		ctx.conn.lastresponse = time.Now()
+		go KeepAliveLoop(ctx)
+	}
 }
 
 func (ctx *Context) WritePacket(p protocol.Packet) error {

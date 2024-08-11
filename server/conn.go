@@ -28,6 +28,18 @@ type conn struct {
 	w         io.Writer
 	state     protocol.State
 	threshold int
+
+	keepalive    int
+	lastresponse time.Time
+}
+
+func (c *conn) UpdateKeepAlive() {
+	c.keepalive += 1
+	if c.keepalive >= 255 {
+		c.keepalive = 1
+	}
+
+	c.lastresponse = time.Now()
 }
 
 type Listener struct {
@@ -56,6 +68,7 @@ type Conn interface {
 
 	State() protocol.State
 	Threshold() int
+	UpdateKeepAlive()
 }
 
 // wrapConn warp an net.Conn to plasma.Conn
