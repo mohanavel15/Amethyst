@@ -8,22 +8,24 @@ import (
 	"log"
 )
 
-func LoginStart(w server.ResponseWriter, r *server.Request) {
-	loginPack, err := login.UnmarshalServerBoundLoginStart(r.Packet)
+func LoginStart(ctx *server.Context) {
+	loginPack, err := login.UnmarshalServerBoundLoginStart(ctx.Packet)
 	if err != nil {
-		w.WritePacket(login.ClientBoundDisconnect{
+		ctx.WritePacket(login.ClientBoundDisconnect{
 			Reason: "Invalid Packet",
 		}.Marshal())
+		return
 	}
 
-	server := r.Server()
-	server.AddPlayer(r, string(loginPack.Name))
+	server := ctx.Server()
+	server.AddPlayer(ctx, string(loginPack.Name))
 
-	vt, err := server.SessionEncrypter.GenerateVerifyToken(r)
+	vt, err := server.SessionEncrypter.GenerateVerifyToken(ctx)
 	if err != nil {
-		w.WritePacket(login.ClientBoundDisconnect{
+		ctx.WritePacket(login.ClientBoundDisconnect{
 			Reason: "Unable To Connect",
 		}.Marshal())
+		return
 	}
 
 	er := login.ClientBoundEncryptionRequest{
@@ -32,43 +34,45 @@ func LoginStart(w server.ResponseWriter, r *server.Request) {
 		VerifyToken: vt,
 	}
 
-	w.WritePacket(er.Marshal())
+	ctx.WritePacket(er.Marshal())
 }
 
-func EncryptionResponse(w server.ResponseWriter, r *server.Request) {
-	encRes, err := login.UnmarshalServerBoundEncryptionResponse(r.Packet)
+func EncryptionResponse(ctx *server.Context) {
+	encRes, err := login.UnmarshalServerBoundEncryptionResponse(ctx.Packet)
 	if err != nil {
-		w.WritePacket(login.ClientBoundDisconnect{
+		ctx.WritePacket(login.ClientBoundDisconnect{
 			Reason: "Invalid Packet",
 		}.Marshal())
+		return
 	}
 
-	server := r.Server()
-	sharedSecret, err := server.SessionEncrypter.DecryptAndVerifySharedSecret(r, encRes.SharedSecret, encRes.VerifyToken)
+	server := ctx.Server()
+	sharedSecret, err := server.SessionEncrypter.DecryptAndVerifySharedSecret(ctx, encRes.SharedSecret, encRes.VerifyToken)
 	if err != nil {
-		w.WritePacket(login.ClientBoundDisconnect{
+		ctx.WritePacket(login.ClientBoundDisconnect{
 			Reason: "Unable To Connect",
 		}.Marshal())
+		return
 	}
 
-	w.SetEncryption(sharedSecret)
+	ctx.SetEncryption(sharedSecret)
 
-	player := server.Player(r)
+	player := server.Player(ctx)
 	log.Println(player.Username())
 
 	setCompress := login.ClientBoundSetCompression{
 		Threshold: 1024,
 	}
-	w.WritePacket(setCompress.Marshal())
-	w.SetCompression(1024)
+	ctx.WritePacket(setCompress.Marshal())
+	ctx.SetCompression(1024)
 
 	loginSuccess := login.ClientBoundLoginSuccess{
 		UUID:     protocol.String(player.UUID().String()),
 		Username: protocol.String(player.Username()),
 	}
 
-	w.WritePacket(loginSuccess.Marshal())
-	w.SetState(protocol.StatePlay)
+	ctx.WritePacket(loginSuccess.Marshal())
+	ctx.SetState(protocol.StatePlay)
 
 	joinGame := play.ClientBoundJoinGame{
 		EntityID:         1,
@@ -80,7 +84,7 @@ func EncryptionResponse(w server.ResponseWriter, r *server.Request) {
 		ReducedDebugInfo: false,
 	}
 
-	w.WritePacket(joinGame.Marshal())
+	ctx.WritePacket(joinGame.Marshal())
 
 	spawnPosition := play.ClientBoundSpawnPosition{
 		Location: protocol.Position{
@@ -90,7 +94,7 @@ func EncryptionResponse(w server.ResponseWriter, r *server.Request) {
 		},
 	}
 
-	w.WritePacket(spawnPosition.Marshal())
+	ctx.WritePacket(spawnPosition.Marshal())
 
 	playerPos := play.ClientBoundPlayerPositionAndLook{
 		X:     0,
@@ -100,5 +104,5 @@ func EncryptionResponse(w server.ResponseWriter, r *server.Request) {
 		Pitch: 0,
 		Flags: 0,
 	}
-	w.WritePacket(playerPos.Marshal())
+	ctx.WritePacket(playerPos.Marshal())
 }

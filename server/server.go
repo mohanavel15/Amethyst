@@ -1,10 +1,7 @@
 package server
 
 import (
-	"amethyst/crypto"
-	"amethyst/protocol"
 	"bufio"
-	"crypto/aes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -16,14 +13,14 @@ import (
 	"github.com/gofrs/uuid"
 )
 
-type HandlerFunc func(w ResponseWriter, r *Request)
+type HandlerFunc func(ctx *Context)
 
-func (f HandlerFunc) ServeProtocol(w ResponseWriter, r *Request) {
-	f(w, r)
+func (f HandlerFunc) ServeProtocol(ctx *Context) {
+	f(ctx)
 }
 
 type Handler interface {
-	ServeProtocol(w ResponseWriter, r *Request)
+	ServeProtocol(ctx *Context)
 }
 
 type Version struct {
@@ -138,8 +135,8 @@ func (srv *Server) removePlayer(c *conn) {
 	delete(srv.players, c)
 }
 
-func (srv *Server) Player(r *Request) Player {
-	return srv.getPlayer(r.conn)
+func (srv *Server) Player(ctx *Context) Player {
+	return srv.getPlayer(ctx.conn)
 }
 
 func (srv *Server) Players() []Player {
@@ -153,9 +150,9 @@ func (srv *Server) Players() []Player {
 	return players
 }
 
-func (srv *Server) AddPlayer(r *Request, username string) {
-	srv.putPlayer(r.conn, player{
-		conn:     r.conn,
+func (srv *Server) AddPlayer(ctx *Context, username string) {
+	srv.putPlayer(ctx.conn, player{
+		conn:     ctx.conn,
 		uuid:     uuid.NewV3(uuid.NamespaceOID, "OfflinePlayer:"+username),
 		username: username,
 	})
@@ -230,13 +227,9 @@ func (srv *Server) serve(c net.Conn) {
 		conn.Close()
 	}()
 
-	r := Request{
+	ctx := Context{
 		server: srv,
 		conn:   conn,
-	}
-
-	w := responseWriter{
-		conn: conn,
 	}
 
 	for {
@@ -245,9 +238,8 @@ func (srv *Server) serve(c net.Conn) {
 			return
 		}
 
-		r.Packet = pk
-
-		srv.Handler.ServeProtocol(&w, &r)
+		ctx.Packet = pk
+		srv.Handler.ServeProtocol(&ctx)
 	}
 }
 
@@ -270,92 +262,4 @@ func ListenAndServe(addr string, handler Handler) error {
 	}
 
 	return srv.ListenAndServe()
-}
-
-type ResponseWriter interface {
-	PacketWriter
-	SetState(state protocol.State)
-	SetEncryption(sharedSecret []byte) error
-	SetCompression(threshold int)
-}
-
-type responseWriter struct {
-	nextState bool
-	conn      *conn
-}
-
-func (w *responseWriter) SetState(state protocol.State) {
-	w.conn.state = state
-}
-
-func (w *responseWriter) WritePacket(p protocol.Packet) error {
-	return w.conn.WritePacket(p)
-}
-
-func (w *responseWriter) SetEncryption(sharedSecret []byte) error {
-	block, err := aes.NewCipher(sharedSecret)
-	if err != nil {
-		return err
-	}
-
-	w.conn.SetCipher(
-		crypto.NewEncrypter(block, sharedSecret),
-		crypto.NewDecrypter(block, sharedSecret),
-	)
-	return nil
-}
-
-func (w *responseWriter) SetCompression(threshold int) {
-	w.conn.threshold = threshold
-}
-
-type Request struct {
-	Packet protocol.Packet
-
-	server *Server
-	conn   *conn
-}
-
-func (r Request) Server() *Server {
-	return r.server
-}
-
-// ClonePacket makes a deep copy of the packet and returns it.
-func (r Request) ClonePacket() protocol.Packet {
-	data := make([]byte, len(r.Packet.Data))
-	copy(data, r.Packet.Data)
-	return protocol.Packet{
-		ID:   r.Packet.ID,
-		Data: data,
-	}
-}
-
-func (r Request) ProtocolState() protocol.State {
-	return r.conn.state
-}
-
-func (r Request) Conn() Conn {
-	return r.conn
-}
-
-func (r *Request) Player() Player {
-	return r.server.Player(r)
-}
-
-func (r *Request) UpdatePlayerUsername(username string) {
-	player := r.server.getPlayer(r.conn)
-	player.username = username
-	r.server.putPlayer(r.conn, player)
-}
-
-func (r *Request) UpdatePlayerUUID(uuid uuid.UUID) {
-	player := r.server.getPlayer(r.conn)
-	player.uuid = uuid
-	r.server.putPlayer(r.conn, player)
-}
-
-func (r *Request) UpdatePlayerSkin(skin Skin) {
-	player := r.server.getPlayer(r.conn)
-	player.skin = skin
-	r.server.putPlayer(r.conn, player)
 }

@@ -6,15 +6,15 @@ import (
 	"amethyst/server"
 )
 
-func Handshake(w server.ResponseWriter, r *server.Request) {
-	hs, err := handshaking.UnmarshalServerBoundHandshake(r.Packet)
+func Handshake(ctx *server.Context) {
+	hs, err := handshaking.UnmarshalServerBoundHandshake(ctx.Packet)
 	if err != nil {
 		return
 	}
 
 	if hs.IsStatusRequest() {
-		w.SetState(protocol.StateStatus)
+		ctx.SetState(protocol.StateStatus)
 	} else if hs.IsLoginRequest() {
-		w.SetState(protocol.StateLogin)
+		ctx.SetState(protocol.StateLogin)
 	}
 }

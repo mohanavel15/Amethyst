@@ -16,8 +16,8 @@ const (
 
 type SessionEncrypter interface {
 	PublicKey() []byte
-	GenerateVerifyToken(r *Request) ([]byte, error)
-	DecryptAndVerifySharedSecret(r *Request, sharedSecret, verifyToken []byte) ([]byte, error)
+	GenerateVerifyToken(ctx *Context) ([]byte, error)
+	DecryptAndVerifySharedSecret(ctx *Context, sharedSecret, verifyToken []byte) ([]byte, error)
 }
 
 type DefaultSessionEncrypter struct {
@@ -53,7 +53,7 @@ func (encrypter *DefaultSessionEncrypter) PublicKey() []byte {
 	return encrypter.publicKey
 }
 
-func (encrypter *DefaultSessionEncrypter) GenerateVerifyToken(r *Request) ([]byte, error) {
+func (encrypter *DefaultSessionEncrypter) GenerateVerifyToken(ctx *Context) ([]byte, error) {
 	encrypter.mu.Lock()
 	defer encrypter.mu.Unlock()
 
@@ -62,19 +62,19 @@ func (encrypter *DefaultSessionEncrypter) GenerateVerifyToken(r *Request) ([]byt
 		return nil, err
 	}
 
-	encrypter.verifyTokens[r.conn] = verifyToken
+	encrypter.verifyTokens[ctx.conn] = verifyToken
 	return verifyToken, nil
 }
 
-func (encrypter *DefaultSessionEncrypter) DecryptAndVerifySharedSecret(r *Request, sharedSecret, verifyToken []byte) ([]byte, error) {
+func (encrypter *DefaultSessionEncrypter) DecryptAndVerifySharedSecret(ctx *Context, sharedSecret, verifyToken []byte) ([]byte, error) {
 	encrypter.mu.Lock()
 	defer encrypter.mu.Unlock()
 
-	token, ok := encrypter.verifyTokens[r.conn]
+	token, ok := encrypter.verifyTokens[ctx.conn]
 	if !ok {
 		return nil, errors.New("no verify token registered")
 	}
-	delete(encrypter.verifyTokens, r.conn)
+	delete(encrypter.verifyTokens, ctx.conn)
 
 	verifyToken, err := encrypter.privateKey.Decrypt(rand.Reader, verifyToken, nil)
 	if err != nil {
