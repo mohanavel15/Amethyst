@@ -2,6 +2,7 @@ package protocol
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"math"
@@ -55,8 +56,6 @@ type (
 	// String is sequence of Unicode scalar values
 	String string
 
-	// Chat is encoded as a String with max length of 32767.
-	Chat = String
 	// Identifier is encoded as a String with max length of 32767.
 	Identifier = String
 
@@ -508,4 +507,46 @@ func (ia *VarIntArray) Decode(r DecodeReader) error {
 		}
 	}
 	return nil
+}
+
+type Chat struct {
+	Text          string     `json:"text,omitempty"`
+	Translate     string     `json:"translate,omitempty"`
+	With          []string   `json:"with,omitempty"`
+	Score         Score      `json:"score,omitempty"`
+	Selector      string     `json:"selector,omitempty"`
+	Extra         []any      `json:"extra,omitempty"`
+	Bold          bool       `json:"bold,omitempty"`
+	Italic        bool       `json:"italic,omitempty"`
+	Underlined    bool       `json:"underlined,omitempty"`
+	Strikethrough bool       `json:"strikethrough,omitempty"`
+	Obfuscated    bool       `json:"obfuscated,omitempty"`
+	Color         string     `json:"color,omitempty"`
+	ClickEvent    ClickEvent `json:"clickEvent,omitempty"`
+	HoverEvent    HoverEvent `json:"hoverEvent,omitempty"`
+	Insertion     string     `json:"insertion,omitempty"`
+}
+
+type Score struct {
+	Name      string `json:"name,omitempty"`
+	Objective string `json:"objective,omitempty"`
+}
+
+type ClickEvent struct {
+	Action string `json:"action,omitempty"`
+	Value  string `json:"value,omitempty"`
+}
+
+type HoverEvent struct {
+	Action string `json:"action,omitempty"`
+	Value  string `json:"value,omitempty"`
+}
+
+func (c Chat) Encode() []byte {
+	buf, _ := json.Marshal(c)
+	return buf
+}
+
+func (c *Chat) Decode(r DecodeReader) error {
+	return json.NewDecoder(r).Decode(c)
 }

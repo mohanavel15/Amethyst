@@ -26,7 +26,9 @@ func KeepAliveLoop(ctx *Context) {
 
 		if time.Since(ctx.conn.lastresponse) > (time.Second * 22) {
 			ctx.WritePacket(play.ClientBoundDisconnect{
-				Reason: "Time Out",
+				Reason: protocol.Chat{
+					Text: "Time Out",
+				},
 			}.Marshal())
 			break
 		}
