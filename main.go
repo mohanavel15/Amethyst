@@ -32,6 +32,7 @@ func main() {
 
 	// State Play
 	handler.HandleFunc(protocol.StatePlay, play.KeepAlivePacketID, handlers.KeepAlive)
+	handler.HandleFunc(protocol.StatePlay, play.ServerBoundChatPacketID, handlers.Chat)
 
 	srv := &server.Server{
 		Addr:                 ":25565",

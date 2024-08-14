@@ -4,6 +4,7 @@ import (
 	"amethyst/protocol"
 	"amethyst/protocol/packets/play"
 	"amethyst/server"
+	"fmt"
 )
 
 func JoinGame(ctx *server.Context) {
@@ -44,4 +45,33 @@ func JoinGame(ctx *server.Context) {
 func KeepAlive(ctx *server.Context) {
 	conn := ctx.Conn()
 	conn.UpdateKeepAlive()
+}
+
+func Chat(ctx *server.Context) {
+	chat_string, err := play.UnmarshalServerBoundChat(ctx.Packet)
+	if err != nil {
+		chat := play.ClientBoundChat{
+			Message: protocol.Chat{
+				Text:  "Invalid Chat Message",
+				Color: "red",
+			},
+			Position: play.ChatTypeSystem,
+		}
+
+		ctx.WritePacket(chat.Marshal())
+		return
+	}
+
+	formatted := fmt.Sprintf("[%s] %s", ctx.Player().Username(), string(chat_string.Message))
+	chat := play.ClientBoundChat{
+		Message: protocol.Chat{
+			Text: formatted,
+		},
+		Position: play.ChatTypeChat,
+	}
+
+	players := ctx.Server().Players()
+	for _, player := range players {
+		player.WritePacket(chat.Marshal())
+	}
 }
