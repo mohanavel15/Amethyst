@@ -544,9 +544,11 @@ type HoverEvent struct {
 
 func (c Chat) Encode() []byte {
 	buf, _ := json.Marshal(c)
-	return buf
+	return String(buf).Encode()
 }
 
 func (c *Chat) Decode(r DecodeReader) error {
-	return json.NewDecoder(r).Decode(c)
+	var s String
+	s.Decode(r)
+	return json.Unmarshal([]byte(s), c)
 }

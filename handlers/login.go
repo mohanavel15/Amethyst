@@ -4,7 +4,6 @@ import (
 	"amethyst/protocol"
 	"amethyst/protocol/packets/login"
 	"amethyst/server"
-	"log"
 )
 
 func LoginStart(ctx *server.Context) {
@@ -65,7 +64,6 @@ func EncryptionResponse(ctx *server.Context) {
 	ctx.SetEncryption(sharedSecret)
 
 	player := server.Player(ctx)
-	log.Println(player.Username())
 
 	setCompress := login.ClientBoundSetCompression{
 		Threshold: 1024,
