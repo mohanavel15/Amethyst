@@ -10,7 +10,7 @@ import (
 func JoinGame(ctx *server.Context) {
 	srv := ctx.Server()
 	joinGame := play.ClientBoundJoinGame{
-		EntityID:         1,
+		EntityID:         protocol.Int(ctx.Player().IntUUID()),
 		Gamemode:         play.GamemodeCreative,
 		Dimension:        play.DimensionOverworld,
 		Difficulty:       play.DifficultyNormal,
