@@ -5,9 +5,11 @@ import (
 	"amethyst/protocol/packets/play"
 	"amethyst/server"
 	"fmt"
+	"time"
 )
 
 func JoinGame(ctx *server.Context) {
+	time.Sleep(5 * time.Millisecond)
 	srv := ctx.Server()
 	joinGame := play.ClientBoundJoinGame{
 		EntityID:         protocol.Int(ctx.Player().IntUUID()),
@@ -49,9 +51,28 @@ func JoinGame(ctx *server.Context) {
 		Position: play.ChatTypeSystem,
 	}
 
+	tablist := play.ClientBoundPlayerTabListItem{
+		Action:      play.ActionAddPlayer,
+		PlayerCount: 1,
+		ActionData: play.TabListActionAddPlayer{
+			UUID: protocol.UUID(ctx.Player().UUID()),
+			Name: protocol.String(ctx.Player().Username()),
+			Properties: []play.AddPlayerProperty{
+				{
+					Name:  "texture",
+					Value: "",
+				},
+			},
+			Gamemode:       1,
+			Ping:           2,
+			HasDisplayName: false,
+		},
+	}
+
 	players := ctx.Server().Players()
 	for _, player := range players {
 		player.WritePacket(chat.Marshal())
+		player.WritePacket(tablist.Marshal())
 	}
 }
 
