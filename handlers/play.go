@@ -40,6 +40,19 @@ func JoinGame(ctx *server.Context) {
 		Flags: 0,
 	}
 	ctx.WritePacket(playerPos.Marshal())
+
+	formatted := fmt.Sprintf("%s joined the game", ctx.Player().Username())
+	chat := play.ClientBoundChat{
+		Message: protocol.Chat{
+			Text: formatted,
+		},
+		Position: play.ChatTypeSystem,
+	}
+
+	players := ctx.Server().Players()
+	for _, player := range players {
+		player.WritePacket(chat.Marshal())
+	}
 }
 
 func KeepAlive(ctx *server.Context) {
