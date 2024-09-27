@@ -509,6 +509,30 @@ func (ia *VarIntArray) Decode(r DecodeReader) error {
 	return nil
 }
 
+const (
+	EMDByte byte = iota
+	EMDShort
+	EMDInt
+	EMDFloat
+	EMDString
+	EMDSlot
+	EMDCords
+	EMDAngles
+)
+
+type EntityMetaData []byte
+
+func (e *EntityMetaData) Insert(datatype byte, key byte, value ...byte) {
+	id := (datatype<<5 | key&0x1F) & 0xFF
+	*e = append(*e, id)
+	*e = append(*e, value...)
+}
+
+func (e EntityMetaData) Encode() []byte {
+	e = append(e, 127)
+	return e
+}
+
 type Chat struct {
 	Text          string     `json:"text,omitempty"`
 	Translate     string     `json:"translate,omitempty"`
