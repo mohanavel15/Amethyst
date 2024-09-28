@@ -5,6 +5,8 @@ Features:
 - [x] Server Status
 - [x] Join Game
 - [X] Chat
+- [X] Tab List
+- [ ] Spawn other players
 
 # Credits
 This project is a fork and built on top of [specspace/plasma](https://github.com/specspace/plasma)
